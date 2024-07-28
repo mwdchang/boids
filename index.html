@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "tweakpane": "https://cdn.jsdelivr.net/npm/tweakpane@4.0.3/dist/tweakpane.min.js",
+      "sphere": "./sphere.js",
+      "boids": "./boids.js"
+    }
+  }
+</script>
+<style>
+body {
+  margin: 0;
+  padding: 0;
+}
+</style>
+</head>
+<body>
+</body>
+<script type="module">
+import {Pane} from 'tweakpane';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import * as Sphere from 'sphere';
+import * as Boids from 'boids';
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+camera.position.z = 15;
+
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize( window.innerWidth, window.innerHeight );
+
+const controls = new OrbitControls( camera, renderer.domElement );
+controls.update();
+
+const ambient = new THREE.AmbientLight(0xAAAAAA); // white ambient light
+scene.add( ambient );
+
+const light1 = new THREE.DirectionalLight(0xffffff);
+light1.position.x = 30;
+light1.position.y = 30;
+light1.position.z = 10;
+scene.add(light1);
+
+// const SIZE = 1000000;
+const SIZE = 1000;
+let drawSize = 500; // smaller than SIZE
+let pointerSize = 0.25;
+
+
+// Initialize agents
+console.log(Boids);
+const agents = Boids.createAgents(SIZE);
+console.log(agents);
+
+
+const points = new THREE.BufferGeometry();
+const vertices = new Float32Array( SIZE * 3 ); // 3 vertices per point
+const speeds = new Float32Array( SIZE * 3 ); // FIXME: remove
+const colors = new Float32Array( SIZE * 3 );
+
+let shape = Sphere;
+shape.initialize(SIZE, vertices, speeds, colors);
+
+points.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+points.setAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
+
+// From: https://stackoverflow.com/questions/41509156/three-js-give-particles-round-form
+function createCanvasMaterial(color, size) {
+  let matCanvas = document.createElement('canvas');
+  matCanvas.width = matCanvas.height = size;
+  let matContext = matCanvas.getContext('2d');
+  // create exture object from canvas.
+  let texture = new THREE.Texture(matCanvas);
+  // Draw a circle
+  let center = size / 2;
+  matContext.beginPath();
+  matContext.arc(center, center, size/2, 0, 2 * Math.PI, false);
+  matContext.closePath();
+  matContext.fillStyle = color;
+  matContext.fill();
+  // need to set needsUpdate
+  texture.needsUpdate = true;
+  // return a texture made from the canvas
+  return texture;
+}
+
+const pointsData = new THREE.Points( points,  
+  new THREE.PointsMaterial({ 
+    map: createCanvasMaterial('#ffffff', 64),
+    color: '#FFF',
+    transparent: true,
+    opacity: 0.53,
+    size: pointerSize,
+    vertexColors: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  })
+);
+pointsData.geometry.setDrawRange(0, drawSize);
+scene.add(pointsData);
+
+
+document.body.appendChild( renderer.domElement );
+
+
+const PARAMS = {
+  Shape: 'Sphere',
+  Particles: drawSize,
+  Size: pointerSize,
+  FPS: 0
+};
+
+// Start 
+Boids.unloadToBuffer(agents, pointsData);
+
+let frames = 0;
+let prevTime = 0;
+const animate = () => {
+  requestAnimationFrame( animate );
+  controls.update();
+  // shape.update(pointsData, vertices, speeds, colors);
+
+  Boids.updateAgents(agents, 10);
+  Boids.unloadToBuffer(agents, pointsData);
+
+  pointsData.geometry.attributes.position.needsUpdate = true;
+  // pointsData.geometry.attributes.color.needsUpdate = true;
+  renderer.render( scene, camera );
+
+  frames++;
+  const time = performance.now();
+  if ( time >= prevTime + 1000 ) {
+    let fps = Math.round( ( frames * 1000 ) / ( time - prevTime ) );
+    PARAMS.FPS = fps;
+    // console.log( fps);
+    frames = 0;
+    prevTime = time;
+  }
+}
+animate();
+
+
+// Tweak pane UI construction
+const pane = new Pane({ title: 'Configuration' });
+
+const particlesHandler = pane.addBinding(
+  PARAMS, 'Particles',
+  { min: 1000, max: SIZE, step: 1000 }
+);
+
+const shapeHandler = pane.addBinding(PARAMS, 'Shape', {
+  options: {
+    Sphere: 'Sphere',
+  },
+});
+
+const sizeHandler = pane.addBinding(
+  PARAMS, 'Size',
+  { min: 0.01, max: 0.8, step: 0.01 }
+);
+
+
+pane.addBinding(PARAMS, 'FPS', {
+  readonly: true,
+  view: 'graph',
+  min: 0
+});
+
+particlesHandler.on('change', function(ev) {
+  drawSize = +ev.value;
+  pointsData.geometry.setDrawRange(0, drawSize);
+});
+
+sizeHandler.on('change', function(ev) {
+  pointerSize = +ev.value;
+  pointsData.material.size = pointerSize;
+});
+
+</script>
+</html>
