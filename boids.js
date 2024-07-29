@@ -28,6 +28,7 @@ const nudgeDirection = (x1, y1, z1, x2, y2, z2) => {
 
 
 class Agent {
+  id;
   x = 0;
   y = 0;
   z = 0;
@@ -35,7 +36,10 @@ class Agent {
   dy = 0;
   dz = 0;
 
-  constructor(x, y, z, dx, dy, dz) {
+  range = 3.25;
+
+  constructor(id, x, y, z, dx, dy, dz) {
+    this.id = id;
     this.x = x;
     this.y = y;
     this.z = z;
@@ -55,9 +59,9 @@ export const createAgents = (size) => {
   const agents = [];
   for (let i = 0; i < size; i++) {
     // Position
-    let x = -0.5 + Math.random();
-    let y = -0.5 + Math.random();
-    let z = -0.5 + Math.random();
+    let x = -5 + 10 * Math.random();
+    let y = -5 + 10 * Math.random();
+    let z = -5 + 10 * Math.random();
 
 
     // Direction
@@ -66,11 +70,103 @@ export const createAgents = (size) => {
     let dz = -0.5 + Math.random();
     [dx, dy, dz] = normalize(dx, dy, dz);
 
-    const agent = new Agent(x, y, z, dx, dy, dz);
+    const agent = new Agent(i, x, y, z, dx, dy, dz);
     agents.push(agent);
   }
   return agents;
 }
+
+const getNeighbourAgents = (agent, agents) => {
+  const results = [];
+  const d2Map = {};
+
+  agents.forEach(a => {
+    if (a.id === agent.id) return;
+
+    const d2 = dist2(
+      agent.x, agent.y, agent.z,
+      a.x, a.y, a.z
+    );
+
+    if (d2 <= (agent.range * agent.range)) {
+      results.push(a);
+      d2Map[a.id] = d2;
+    }
+  });
+  return [results, d2Map];
+}
+
+const alignment = (agent, agents) => {
+  if (agents.length === 0) return;
+
+  let dx = 0;
+  let dy = 0;
+  let dz = 0;
+  agents.forEach(a => {
+    dx += a.dx;
+    dy += a.dy;
+    dz += a.dz;
+  });
+  dx /= agents.length;
+  dy /= agents.length;
+  dz /= agents.length;
+
+  [agent.dx, agent.dy, agent.dz] = nudgeDirection(
+    agent.dx, agent.dy, agent.dz,
+    dx, dy, dz
+  );
+}
+
+const cohesion = (agent, agents) => {
+  if (agents.length === 0) return;
+
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  agents.forEach(a => {
+    x += a.x;
+    y += a.y;
+    z += a.z;
+  });
+  x /= agents.length;
+  y /= agents.length;
+  z /= agents.length;
+
+  // target
+  const tx = (x - agent.x);
+  const ty = (y - agent.y);
+  const tz = (z - agent.z);
+
+  [agent.dx, agent.dy, agent.dz] = nudgeDirection(
+    agent.dx, agent.dy, agent.dz,
+    tx, ty, tz
+  );
+}
+
+const separation = (agent, agents, d2Map) => {
+  if (agents.length === 0) return;
+
+  let cx = 0;
+  let cy = 0;
+  let cz = 0;
+  agents.forEach(a => {
+    const d2 = d2Map[a.id];
+    if (d2 < 0.4 * 0.4) {
+      cx += (agent.x - a.x);
+      cy += (agent.y - a.y);
+      cz += (agent.z - a.z);
+    }
+  });
+
+
+  // [cx, cy, cz] = normalize(cx, cy, cz);
+
+  [agent.dx, agent.dy, agent.dz] = nudgeDirection(
+    agent.dx, agent.dy, agent.dz,
+    cx, cy, cz
+  );
+}
+
 
 export const updateAgents = (agents, bound) => {
   /**
@@ -86,6 +182,16 @@ export const updateAgents = (agents, bound) => {
     agent.y += 0.2 * agent.dy;
     agent.z += 0.2 * agent.dz;
 
+    // 1. grab neighbours, each eagent is reactive to what it can perceive
+    const [neighbourAgents, d2Map] = getNeighbourAgents(agent, agents);
+
+
+    // 2. apply rules
+    alignment(agent, neighbourAgents);
+    cohesion(agent, neighbourAgents);
+    separation(agent, neighbourAgents, d2Map);
+
+
     // Move the the other side
     if (agent.x > bound) agent.x = -bound;
     if (agent.x < -bound) agent.x = bound;
@@ -97,10 +203,10 @@ export const updateAgents = (agents, bound) => {
     if (agent.z < -bound) agent.z = bound;
 
     // Test
-    [agent.dx, agent.dy, agent.dz] = nudgeDirection(
-      agent.dx, agent.dy, agent.dz,
-      1, 0, 0
-    );
+    // [agent.dx, agent.dy, agent.dz] = nudgeDirection(
+    //   agent.dx, agent.dy, agent.dz,
+    //   1, 0, 0
+    // );
   });
 }
 
