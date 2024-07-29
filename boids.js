@@ -35,10 +35,12 @@ class Agent {
   dx = 0;
   dy = 0;
   dz = 0;
+  speed = 0;
 
-  range = 3.25;
+  range = 2.50;
+  selfBoundary = 1.1;
 
-  constructor(id, x, y, z, dx, dy, dz) {
+  constructor(id, x, y, z, dx, dy, dz, speed) {
     this.id = id;
     this.x = x;
     this.y = y;
@@ -46,6 +48,7 @@ class Agent {
     this.dx = dx;
     this.dy = dy;
     this.dz = dz;
+    this.speed = speed;
   }
 
   update() {
@@ -70,7 +73,9 @@ export const createAgents = (size) => {
     let dz = -0.5 + Math.random();
     [dx, dy, dz] = normalize(dx, dy, dz);
 
-    const agent = new Agent(i, x, y, z, dx, dy, dz);
+    let speed = 0.025 + 0.07 * Math.random();
+
+    const agent = new Agent(i, x, y, z, dx, dy, dz, speed);
     agents.push(agent);
   }
   return agents;
@@ -79,6 +84,7 @@ export const createAgents = (size) => {
 const getNeighbourAgents = (agent, agents) => {
   const results = [];
   const d2Map = {};
+  const range = agent.range * agent.range;
 
   agents.forEach(a => {
     if (a.id === agent.id) return;
@@ -88,7 +94,7 @@ const getNeighbourAgents = (agent, agents) => {
       a.x, a.y, a.z
     );
 
-    if (d2 <= (agent.range * agent.range)) {
+    if (d2 <= range) {
       results.push(a);
       d2Map[a.id] = d2;
     }
@@ -149,18 +155,18 @@ const separation = (agent, agents, d2Map) => {
   let cx = 0;
   let cy = 0;
   let cz = 0;
+  const bound = agent.selfBoundary * agent.selfBoundary;
   agents.forEach(a => {
     const d2 = d2Map[a.id];
-    if (d2 < 0.4 * 0.4) {
+    if (d2 < bound) {
       cx += (agent.x - a.x);
       cy += (agent.y - a.y);
       cz += (agent.z - a.z);
     }
   });
 
-
+  // FIXME ???
   // [cx, cy, cz] = normalize(cx, cy, cz);
-
   [agent.dx, agent.dy, agent.dz] = nudgeDirection(
     agent.dx, agent.dy, agent.dz,
     cx, cy, cz
@@ -169,38 +175,35 @@ const separation = (agent, agents, d2Map) => {
 
 
 export const updateAgents = (agents, bound) => {
-  /**
-   *
-   * align-force
-   * separte-force
-   * cohesion-force
-   *
-  **/
-
   agents.forEach(agent => {
-    agent.x += 0.2 * agent.dx;
-    agent.y += 0.2 * agent.dy;
-    agent.z += 0.2 * agent.dz;
+    agent.x += agent.speed * agent.dx;
+    agent.y += agent.speed * agent.dy;
+    agent.z += agent.speed * agent.dz;
 
     // 1. grab neighbours, each eagent is reactive to what it can perceive
     const [neighbourAgents, d2Map] = getNeighbourAgents(agent, agents);
-
 
     // 2. apply rules
     alignment(agent, neighbourAgents);
     cohesion(agent, neighbourAgents);
     separation(agent, neighbourAgents, d2Map);
 
-
-    // Move the the other side
+    // move the the other side
+    /*
     if (agent.x > bound) agent.x = -bound;
     if (agent.x < -bound) agent.x = bound;
-
     if (agent.y > bound) agent.y = -bound;
     if (agent.y < -bound) agent.y = bound;
-
     if (agent.z > bound) agent.z = -bound;
     if (agent.z < -bound) agent.z = bound;
+    */
+
+
+    // walls
+    if (agent.x > bound || agent.x < -bound) agent.dx *= -1;
+    if (agent.y > bound || agent.y < -bound) agent.dy *= -1;
+    if (agent.z > bound || agent.z < -bound) agent.dz *= -1;
+
 
     // Test
     // [agent.dx, agent.dy, agent.dz] = nudgeDirection(

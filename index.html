@@ -7,7 +7,6 @@
       "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
       "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
       "tweakpane": "https://cdn.jsdelivr.net/npm/tweakpane@4.0.3/dist/tweakpane.min.js",
-      "sphere": "./sphere.js",
       "boids": "./boids.js"
     }
   }
@@ -25,7 +24,6 @@ body {
 import {Pane} from 'tweakpane';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import * as Sphere from 'sphere';
 import * as Boids from 'boids';
 
 const scene = new THREE.Scene();
@@ -64,8 +62,12 @@ const vertices = new Float32Array( SIZE * 3 ); // 3 vertices per point
 const speeds = new Float32Array( SIZE * 3 ); // FIXME: remove
 const colors = new Float32Array( SIZE * 3 );
 
-let shape = Sphere;
-shape.initialize(SIZE, vertices, speeds, colors);
+// colours
+for (let i = 0; i < SIZE; i++) {
+  colors[i * 3 + 0] = 0.3;
+  colors[i * 3 + 1] = 1.0;
+  colors[i * 3 + 2] = 0.2;
+}
 
 points.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
 points.setAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
@@ -110,7 +112,6 @@ document.body.appendChild( renderer.domElement );
 
 
 const PARAMS = {
-  Shape: 'Sphere',
   Particles: drawSize,
   Size: pointerSize,
   FPS: 0
@@ -124,7 +125,6 @@ let prevTime = 0;
 const animate = () => {
   requestAnimationFrame( animate );
   controls.update();
-  // shape.update(pointsData, vertices, speeds, colors);
 
   Boids.updateAgents(agents, 10);
   Boids.unloadToBuffer(agents, pointsData);
@@ -153,12 +153,6 @@ const particlesHandler = pane.addBinding(
   PARAMS, 'Particles',
   { min: 1000, max: SIZE, step: 1000 }
 );
-
-const shapeHandler = pane.addBinding(PARAMS, 'Shape', {
-  options: {
-    Sphere: 'Sphere',
-  },
-});
 
 const sizeHandler = pane.addBinding(
   PARAMS, 'Size',
