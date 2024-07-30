@@ -73,7 +73,7 @@ export const createAgents = (size, worldSize) => {
     let dz = -0.5 + Math.random();
     [dx, dy, dz] = normalize(dx, dy, dz);
 
-    let speed = 0.025 + 0.07 * Math.random();
+    let speed = 0.05 + 0.07 * Math.random();
 
     const agent = new Agent(i, x, y, z, dx, dy, dz, speed);
     agents.push(agent);
@@ -174,7 +174,7 @@ const separation = (agent, agents, d2Map) => {
 }
 
 
-export const updateAgents = (agents, bound) => {
+export const updateAgents = (agents, bound, hardWall) => {
   agents.forEach(agent => {
     agent.x += agent.speed * agent.dx;
     agent.y += agent.speed * agent.dy;
@@ -188,21 +188,42 @@ export const updateAgents = (agents, bound) => {
     cohesion(agent, neighbourAgents);
     separation(agent, neighbourAgents, d2Map);
 
-    // move the the other side
-    if (agent.x > bound) agent.x = -bound;
-    if (agent.x < -bound) agent.x = bound;
-    if (agent.y > bound) agent.y = -bound;
-    if (agent.y < -bound) agent.y = bound;
-    if (agent.z > bound) agent.z = -bound;
-    if (agent.z < -bound) agent.z = bound;
-
     // walls
-    /*
-    if (agent.x > bound || agent.x < -bound) agent.dx *= -1;
-    if (agent.y > bound || agent.y < -bound) agent.dy *= -1;
-    if (agent.z > bound || agent.z < -bound) agent.dz *= -1;
-    */
+    if (hardWall) {
+      if (agent.x > bound) {
+        agent.x = bound;
+        agent.dx *= -1;
+      }
+      if (agent.x < -bound) {
+        agent.x = -bound;
+        agent.dx *= -1;
+      }
 
+      if (agent.y > bound) {
+        agent.y = bound;
+        agent.dy *= -1;
+      }
+      if (agent.y < -bound) {
+        agent.y = -bound;
+        agent.dy *= -1;
+      }
+
+      if (agent.z > bound) {
+        agent.z = bound;
+        agent.dz *= -1;
+      }
+      if (agent.z < -bound) {
+        agent.z = -bound;
+        agent.dz *= -1;
+      }
+    } else {
+      if (agent.x > bound) agent.x = -bound;
+      if (agent.x < -bound) agent.x = bound;
+      if (agent.y > bound) agent.y = -bound;
+      if (agent.y < -bound) agent.y = bound;
+      if (agent.z > bound) agent.z = -bound;
+      if (agent.z < -bound) agent.z = bound;
+    }
 
     // Test
     // [agent.dx, agent.dy, agent.dz] = nudgeDirection(

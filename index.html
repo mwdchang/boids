@@ -48,11 +48,12 @@ light1.position.z = 10;
 scene.add(light1);
 
 // const SIZE = 1000000;
-const SIZE = 700;
-let drawSize = 700; // <= than SIZE
+const SIZE = 600;
+let drawSize = 600; // <= than SIZE
 let pointerSize = 0.30;
+let hardWall = true;
 
-const worldSize = 10;
+const worldSize = 9;
 
 // Initialize agents
 const agents = Boids.createAgents(SIZE, worldSize);
@@ -108,19 +109,18 @@ pointsData.geometry.setDrawRange(0, drawSize);
 scene.add(pointsData);
 
 const cubeGeom = new THREE.BoxGeometry( worldSize * 2, worldSize * 2, worldSize * 2 );
-const material = new THREE.MeshBasicMaterial( {color: 0xdddddd,  opacity:0.8, transparent: false});
+const material = new THREE.MeshBasicMaterial( {color: 0x555555,  opacity:0.8, transparent: false});
 // const cube = new THREE.Mesh( cubeGeom, material );
 const _wireframe = new THREE.EdgesGeometry( cubeGeom ); // or WireframeGeometry( geometry )
 const wireframe = new THREE.LineSegments( _wireframe, material);
 scene.add( wireframe );
 
-
 document.body.appendChild( renderer.domElement );
-
 
 const PARAMS = {
   Particles: drawSize,
   Size: pointerSize,
+  HardWall: hardWall,
   FPS: 0
 };
 
@@ -133,7 +133,7 @@ const animate = () => {
   requestAnimationFrame( animate );
   controls.update();
 
-  Boids.updateAgents(agents, worldSize);
+  Boids.updateAgents(agents, worldSize, hardWall);
   Boids.unloadToBuffer(agents, pointsData);
 
   pointsData.geometry.attributes.position.needsUpdate = true;
@@ -156,16 +156,19 @@ animate();
 // Tweak pane UI construction
 const pane = new Pane({ title: 'Configuration' });
 
-const particlesHandler = pane.addBinding(
-  PARAMS, 'Particles',
-  { min: 1000, max: SIZE, step: 1000 }
-);
+// const particlesHandler = pane.addBinding(
+//   PARAMS, 'Particles',
+//   { min: 1000, max: SIZE, step: 1000 }
+// );
 
 const sizeHandler = pane.addBinding(
   PARAMS, 'Size',
   { min: 0.01, max: 0.8, step: 0.01 }
 );
 
+const wallHandler = pane.addBinding(
+  PARAMS, 'HardWall'
+);
 
 pane.addBinding(PARAMS, 'FPS', {
   readonly: true,
@@ -173,14 +176,19 @@ pane.addBinding(PARAMS, 'FPS', {
   min: 0
 });
 
-particlesHandler.on('change', function(ev) {
-  drawSize = +ev.value;
-  pointsData.geometry.setDrawRange(0, drawSize);
-});
+// particlesHandler.on('change', function(ev) {
+//   drawSize = +ev.value;
+//   pointsData.geometry.setDrawRange(0, drawSize);
+// });
 
 sizeHandler.on('change', function(ev) {
   pointerSize = +ev.value;
   pointsData.material.size = pointerSize;
+});
+
+wallHandler.on('change', function(ev) {
+  console.log('!!', ev.value);
+  hardWall = ev.value;
 });
 
 </script>
