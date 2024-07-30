@@ -37,8 +37,8 @@ class Agent {
   dz = 0;
   speed = 0;
 
-  range = 2.50;
-  selfBoundary = 1.1;
+  range = 3.25;
+  selfBoundary = 0.75;
 
   constructor(id, x, y, z, dx, dy, dz, speed) {
     this.id = id;
@@ -58,13 +58,13 @@ class Agent {
   }
 }
 
-export const createAgents = (size) => {
+export const createAgents = (size, worldSize) => {
   const agents = [];
   for (let i = 0; i < size; i++) {
     // Position
-    let x = -5 + 10 * Math.random();
-    let y = -5 + 10 * Math.random();
-    let z = -5 + 10 * Math.random();
+    let x = -0.5 * worldSize + worldSize * Math.random();
+    let y = -0.5 * worldSize + worldSize * Math.random();
+    let z = -0.5 * worldSize + worldSize * Math.random();
 
 
     // Direction
@@ -189,20 +189,19 @@ export const updateAgents = (agents, bound) => {
     separation(agent, neighbourAgents, d2Map);
 
     // move the the other side
-    /*
     if (agent.x > bound) agent.x = -bound;
     if (agent.x < -bound) agent.x = bound;
     if (agent.y > bound) agent.y = -bound;
     if (agent.y < -bound) agent.y = bound;
     if (agent.z > bound) agent.z = -bound;
     if (agent.z < -bound) agent.z = bound;
-    */
-
 
     // walls
+    /*
     if (agent.x > bound || agent.x < -bound) agent.dx *= -1;
     if (agent.y > bound || agent.y < -bound) agent.dy *= -1;
     if (agent.z > bound || agent.z < -bound) agent.dz *= -1;
+    */
 
 
     // Test
