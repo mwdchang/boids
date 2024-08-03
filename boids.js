@@ -18,11 +18,10 @@ const normalize = (x, y, z) => {
 
 // nudge viector (x1, y1, z1) towards vector (x2, y2, z2)
 // @return normalied new direction
-const nudgeDirection = (x1, y1, z1, x2, y2, z2) => {
-  const k = 0.01;
-  const xNew = x1 + k * (x2 - x1);
-  const yNew = y1 + k * (y2 - y1);
-  const zNew = z1 + k * (z2 - z1);
+const nudgeDirection = (x1, y1, z1, x2, y2, z2, weight = 0.01) => {
+  const xNew = x1 + weight * (x2 - x1);
+  const yNew = y1 + weight * (y2 - y1);
+  const zNew = z1 + weight * (z2 - z1);
   return normalize(xNew, yNew, zNew);
 }
 
@@ -102,7 +101,7 @@ const getNeighbourAgents = (agent, agents) => {
   return [results, d2Map];
 }
 
-const alignment = (agent, agents) => {
+const alignment = (agent, agents, weight) => {
   if (agents.length === 0) return;
 
   let dx = 0;
@@ -119,11 +118,12 @@ const alignment = (agent, agents) => {
 
   [agent.dx, agent.dy, agent.dz] = nudgeDirection(
     agent.dx, agent.dy, agent.dz,
-    dx, dy, dz
+    dx, dy, dz,
+    weight
   );
 }
 
-const cohesion = (agent, agents) => {
+const cohesion = (agent, agents, weight) => {
   if (agents.length === 0) return;
 
   let x = 0;
@@ -145,11 +145,12 @@ const cohesion = (agent, agents) => {
 
   [agent.dx, agent.dy, agent.dz] = nudgeDirection(
     agent.dx, agent.dy, agent.dz,
-    tx, ty, tz
+    tx, ty, tz,
+    weight
   );
 }
 
-const separation = (agent, agents, d2Map) => {
+const separation = (agent, agents, d2Map, weight) => {
   if (agents.length === 0) return;
 
   let cx = 0;
@@ -169,12 +170,13 @@ const separation = (agent, agents, d2Map) => {
   // [cx, cy, cz] = normalize(cx, cy, cz);
   [agent.dx, agent.dy, agent.dz] = nudgeDirection(
     agent.dx, agent.dy, agent.dz,
-    cx, cy, cz
+    cx, cy, cz,
+    weight
   );
 }
 
 
-export const updateAgents = (agents, bound, hardWall) => {
+export const updateAgents = (agents, bound, options) => {
   agents.forEach(agent => {
     agent.x += agent.speed * agent.dx;
     agent.y += agent.speed * agent.dy;
@@ -184,12 +186,12 @@ export const updateAgents = (agents, bound, hardWall) => {
     const [neighbourAgents, d2Map] = getNeighbourAgents(agent, agents);
 
     // 2. apply rules
-    alignment(agent, neighbourAgents);
-    cohesion(agent, neighbourAgents);
-    separation(agent, neighbourAgents, d2Map);
+    alignment(agent, neighbourAgents, options.alignmentWeight);
+    cohesion(agent, neighbourAgents, options.cohesionWeight);
+    separation(agent, neighbourAgents, d2Map, options.separationWeight);
 
     // walls
-    if (hardWall) {
+    if (options.hardWall) {
       if (agent.x > bound) {
         agent.x = bound;
         agent.dx *= -1;
